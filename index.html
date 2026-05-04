@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ローカル変換ツール集</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- QRコード用ライブラリ -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <!-- バーコード用ライブラリ -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>ローカル変換・生成ツール</h1>
+    <p>画像変換 / QRコード / バーコード などをブラウザだけで実行</p>
+  </header>
+
+  <!-- タブメニュー -->
+  <nav class="tab-nav">
+    <button class="tab-button active" data-tab="image-tab">画像変換 (JPEG / PNG)</button>
+    <button class="tab-button" data-tab="qr-tab">QRコード作成</button>
+    <button class="tab-button" data-tab="barcode-tab">バーコード作成</button>
+    <!-- ここに今後、PDF, Word, MP3, MP4 などのタブを増やしていけます -->
+  </nav>
+
+  <!-- タブ内容：画像変換 -->
+  <section id="image-tab" class="tab-content active">
+    <h2>画像変換 (JPEG / PNG)</h2>
+    <div class="panel">
+      <label class="file-label">
+        変換したい画像ファイルを選択：
+        <input type="file" id="image-input" accept="image/*">
+      </label>
+
+      <div class="form-row">
+        <label for="image-format">出力形式：</label>
+        <select id="image-format">
+          <option value="image/png">PNG</option>
+          <option value="image/jpeg">JPEG</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="image-filename">出力ファイル名（拡張子なし）：</label>
+        <input type="text" id="image-filename" placeholder="output_image">
+      </div>
+
+      <button id="convert-image-btn">変換する</button>
+    </div>
+
+    <div class="result-area">
+      <h3>結果プレビュー</h3>
+      <canvas id="image-preview" class="preview-canvas"></canvas>
+      <div class="download-area" id="image-download-area"></div>
+    </div>
+  </section>
+
+  <!-- タブ内容：QRコード作成 -->
+  <section id="qr-tab" class="tab-content">
+    <h2>QRコード作成</h2>
+    <div class="panel">
+      <div class="form-row">
+        <label for="qr-text">QRコードにしたいテキスト / URL：</label>
+        <textarea id="qr-text" rows="4" placeholder="https://example.com など"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label for="qr-filename">出力ファイル名（拡張子なし）：</label>
+        <input type="text" id="qr-filename" placeholder="qrcode">
+      </div>
+
+      <button id="generate-qr-btn">QRコードを作成</button>
+      <button id="copy-qr-btn" disabled>クリップボードにコピー（画像）</button>
+    </div>
+
+    <div class="result-area">
+      <h3>結果プレビュー</h3>
+      <canvas id="qr-canvas" class="preview-canvas"></canvas>
+      <div class="download-area" id="qr-download-area"></div>
+    </div>
+  </section>
+
+  <!-- タブ内容：バーコード作成 -->
+  <section id="barcode-tab" class="tab-content">
+    <h2>バーコード作成</h2>
+    <div class="panel">
+      <div class="form-row">
+        <label for="barcode-text">バーコードにしたいテキスト / 数字：</label>
+        <input type="text" id="barcode-text" placeholder="JANコードなど">
+      </div>
+
+      <div class="form-row">
+        <label for="barcode-format">バーコード形式：</label>
+        <select id="barcode-format">
+          <option value="CODE128">CODE128</option>
+          <option value="EAN13">EAN13</option>
+          <option value="EAN8">EAN8</option>
+          <!-- 必要に応じて形式を追加 -->
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="barcode-filename">出力ファイル名（拡張子なし）：</label>
+        <input type="text" id="barcode-filename" placeholder="barcode">
+      </div>
+
+      <button id="generate-barcode-btn">バーコードを作成</button>
+      <button id="copy-barcode-btn" disabled>クリップボードにコピー（画像）</button>
+    </div>
+
+    <div class="result-area">
+      <h3>結果プレビュー</h3>
+      <svg id="barcode-svg" class="preview-svg"></svg>
+      <div class="download-area" id="barcode-download-area"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>このページはブラウザ内でのみ処理を行い、ファイルはサーバに送信されません。</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
