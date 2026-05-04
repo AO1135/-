@@ -146,6 +146,14 @@ button:disabled {
   border: 1px dashed #ccc;
 }
 
+.preview-frame {
+  display: none;
+  width: 100%;
+  height: 400px;
+  border: 1px solid #ccc;
+  margin-top: 8px;
+}
+
 .download-area {
   margin-top: 12px;
   font-size: 0.9rem;
@@ -162,4 +170,17 @@ footer {
   padding: 12px;
   font-size: 0.8rem;
   color: #666;
+}
+
+.note {
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.status-message {
+  font-size: 0.85rem;
+  margin-top: 8px;
+  color: #444;
 }
