@@ -5,6 +5,9 @@
   <title>TabConvert Studio</title>
   <link rel="stylesheet" href="style.css">
 
+  <!-- jsPDF（画像からPDFを生成するため） -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
   <!-- QRコード用ライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
@@ -24,12 +27,13 @@
     <button class="tab-button" data-tab="barcode-tab">バーコード作成</button>
   </nav>
 
-  <!-- タブ内容：ファイル変換（複数画像対応） -->
+  <!-- タブ内容：ファイル変換 -->
   <section id="convert-tab" class="tab-content active">
     <h2>ファイル変換</h2>
     <p class="note">
       ※ 現時点ではブラウザだけで実現しやすい変換のみ実装済みです。<br>
-      画像(JPEG/PNG) 複数枚 → JPEG/PNG/PDF に対応（PDF/Wordの高度な変換は後から追加できます）。
+      画像(JPEG/PNG) 複数枚 → 1つのPDF（複数ページ）にまとめることができます。<br>
+      画像⇔画像変換も対応（こちらはファイルごとに出力されます）。
     </p>
 
     <div class="panel">
@@ -69,7 +73,8 @@
       <div class="form-row">
         <label for="output-filename">
           出力ファイル名のベース（拡張子なし）：<br>
-          ※複数ファイルの場合は「base_1, base_2 ...」のように連番を付けます
+          ・PDF出力時：1つのPDFファイルとして「base.pdf」で保存されます。<br>
+          ・画像出力時：現状はファイルごとに「base_1.jpg」などで保存されます。
         </label>
         <input type="text" id="output-filename" placeholder="output_file">
       </div>
@@ -79,7 +84,7 @@
     </div>
 
     <div class="result-area">
-      <h3>結果プレビュー（最初のファイルのみ）</h3>
+      <h3>結果プレビュー（最初のファイルのみ / PDFは全体）</h3>
       <canvas id="convert-preview-canvas" class="preview-canvas"></canvas>
       <iframe id="convert-preview-frame" class="preview-frame"></iframe>
       <div class="download-area" id="convert-download-area"></div>
