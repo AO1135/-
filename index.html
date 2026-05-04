@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ローカル変換ツール集</title>
+  <title>TabConvert Studio</title>
   <link rel="stylesheet" href="style.css">
 
   <!-- QRコード用ライブラリ -->
@@ -13,47 +13,68 @@
 </head>
 <body>
   <header>
-    <h1>ローカル変換・生成ツール</h1>
-    <p>画像変換 / QRコード / バーコード などをブラウザだけで実行</p>
+    <h1>TabConvert Studio</h1>
+    <p>PDF / 画像 / Word と QR・バーコードをまとめて扱うローカル変換ツール</p>
   </header>
 
   <!-- タブメニュー -->
   <nav class="tab-nav">
-    <button class="tab-button active" data-tab="image-tab">画像変換 (JPEG / PNG)</button>
+    <button class="tab-button active" data-tab="convert-tab">ファイル変換</button>
     <button class="tab-button" data-tab="qr-tab">QRコード作成</button>
     <button class="tab-button" data-tab="barcode-tab">バーコード作成</button>
-    <!-- ここに今後、PDF, Word, MP3, MP4 などのタブを増やしていけます -->
   </nav>
 
-  <!-- タブ内容：画像変換 -->
-  <section id="image-tab" class="tab-content active">
-    <h2>画像変換 (JPEG / PNG)</h2>
+  <!-- タブ内容：ファイル変換 -->
+  <section id="convert-tab" class="tab-content active">
+    <h2>ファイル変換</h2>
+    <p class="note">
+      ※ 現時点ではブラウザだけで実現しやすい変換のみ実装済みです。<br>
+      画像(JPEG/PNG) ↔ 画像、画像 → PDF に対応。PDF/Wordの高度な変換は後から追加できます。
+    </p>
+
     <div class="panel">
-      <label class="file-label">
-        変換したい画像ファイルを選択：
-        <input type="file" id="image-input" accept="image/*">
-      </label>
+      <div class="form-row">
+        <label class="file-label">
+          入力ファイル（PDF / JPEG / PNG / DOCX）：
+          <input type="file" id="convert-input-file" accept=".pdf,.png,.jpg,.jpeg,.docx,application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        </label>
+      </div>
 
       <div class="form-row">
-        <label for="image-format">出力形式：</label>
-        <select id="image-format">
-          <option value="image/png">PNG</option>
-          <option value="image/jpeg">JPEG</option>
+        <label for="input-type">入力形式（推定されますが手動選択も可）：</label>
+        <select id="input-type">
+          <option value="auto">自動判定</option>
+          <option value="pdf">PDF (.pdf)</option>
+          <option value="jpeg">JPEG (.jpg/.jpeg)</option>
+          <option value="png">PNG (.png)</option>
+          <option value="word">Word (.docx)</option>
         </select>
       </div>
 
       <div class="form-row">
-        <label for="image-filename">出力ファイル名（拡張子なし）：</label>
-        <input type="text" id="image-filename" placeholder="output_image">
+        <label for="output-type">出力形式：</label>
+        <select id="output-type">
+          <option value="pdf">PDF (.pdf)</option>
+          <option value="jpeg">JPEG (.jpg)</option>
+          <option value="png">PNG (.png)</option>
+          <option value="word">Word (.docx)</option>
+        </select>
       </div>
 
-      <button id="convert-image-btn">変換する</button>
+      <div class="form-row">
+        <label for="output-filename">出力ファイル名（拡張子なし）：</label>
+        <input type="text" id="output-filename" placeholder="output_file">
+      </div>
+
+      <button id="convert-file-btn">変換を実行</button>
+      <p id="convert-status" class="status-message"></p>
     </div>
 
     <div class="result-area">
       <h3>結果プレビュー</h3>
-      <canvas id="image-preview" class="preview-canvas"></canvas>
-      <div class="download-area" id="image-download-area"></div>
+      <canvas id="convert-preview-canvas" class="preview-canvas"></canvas>
+      <iframe id="convert-preview-frame" class="preview-frame"></iframe>
+      <div class="download-area" id="convert-download-area"></div>
     </div>
   </section>
 
@@ -97,7 +118,6 @@
           <option value="CODE128">CODE128</option>
           <option value="EAN13">EAN13</option>
           <option value="EAN8">EAN8</option>
-          <!-- 必要に応じて形式を追加 -->
         </select>
       </div>
 
@@ -118,7 +138,7 @@
   </section>
 
   <footer>
-    <p>このページはブラウザ内でのみ処理を行い、ファイルはサーバに送信されません。</p>
+    <p>すべての処理はブラウザ内で行われ、ファイルはサーバに送信されません。</p>
   </footer>
 
   <script src="script.js"></script>
