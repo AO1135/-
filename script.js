@@ -1,81 +1,271 @@
-// ========== タブ切り替え ==========
+// ========== 共通：タブ切り替え ==========
 
 document.querySelectorAll(".tab-button").forEach((btn) => {
   btn.addEventListener("click", () => {
     const target = btn.dataset.tab;
 
-    // ボタンの active 切り替え
     document.querySelectorAll(".tab-button").forEach((b) => {
       b.classList.toggle("active", b === btn);
     });
 
-    // タブコンテンツの切り替え
     document.querySelectorAll(".tab-content").forEach((sec) => {
       sec.classList.toggle("active", sec.id === target);
     });
   });
 });
 
-// ========== 画像変換機能 (JPEG / PNG) ==========
+// ========== ファイル変換タブ ==========
 
-const imageInput = document.getElementById("image-input");
-const imageFormatSelect = document.getElementById("image-format");
-const imageFilenameInput = document.getElementById("image-filename");
-const convertImageBtn = document.getElementById("convert-image-btn");
-const imagePreviewCanvas = document.getElementById("image-preview");
-const imageDownloadArea = document.getElementById("image-download-area");
+const convertInputFile = document.getElementById("convert-input-file");
+const inputTypeSelect = document.getElementById("input-type");
+const outputTypeSelect = document.getElementById("output-type");
+const outputFilenameInput = document.getElementById("output-filename");
+const convertFileBtn = document.getElementById("convert-file-btn");
+const convertStatus = document.getElementById("convert-status");
+const convertPreviewCanvas = document.getElementById("convert-preview-canvas");
+const convertPreviewFrame = document.getElementById("convert-preview-frame");
+const convertDownloadArea = document.getElementById("convert-download-area");
 
-let loadedImage = null;
+let currentInputFile = null;
 
-imageInput.addEventListener("change", () => {
-  const file = imageInput.files[0];
+// 入力ファイル選択
+convertInputFile.addEventListener("change", () => {
+  const file = convertInputFile.files[0];
+  currentInputFile = file || null;
+  convertStatus.textContent = "";
+  convertDownloadArea.innerHTML = "";
+  hidePreview();
+
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      loadedImage = img;
-      const ctx = imagePreviewCanvas.getContext("2d");
-      imagePreviewCanvas.width = img.width;
-      imagePreviewCanvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      imageDownloadArea.innerHTML = "";
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  // 自動判定の場合、MIMEタイプ or 拡張子から推定してセレクトを更新
+  if (inputTypeSelect.value === "auto") {
+    const detected = detectInputType(file);
+    if (detected) {
+      inputTypeSelect.value = detected;
+      convertStatus.textContent = `入力形式を「${detected.toUpperCase()}」と判定しました。`;
+    }
+  }
 });
 
-convertImageBtn.addEventListener("click", () => {
-  if (!loadedImage) {
-    alert("先に画像ファイルを選択してください。");
+// 入力タイプ判定
+function detectInputType(file) {
+  const name = file.name.toLowerCase();
+  const type = file.type;
+
+  if (type === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+  if (type === "image/jpeg" || name.endsWith(".jpg") || name.endsWith(".jpeg")) return "jpeg";
+  if (type === "image/png" || name.endsWith(".png")) return "png";
+  if (
+    type ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    name.endsWith(".docx")
+  )
+    return "word";
+
+  return null;
+}
+
+// プレビューを一旦隠す
+function hidePreview() {
+  convertPreviewCanvas.style.display = "none";
+  convertPreviewFrame.style.display = "none";
+  const ctx = convertPreviewCanvas.getContext("2d");
+  ctx.clearRect(0, 0, convertPreviewCanvas.width, convertPreviewCanvas.height);
+  convertPreviewFrame.src = "about:blank";
+}
+
+// 変換ボタンクリック
+convertFileBtn.addEventListener("click", () => {
+  if (!currentInputFile) {
+    alert("先に入力ファイルを選択してください。");
     return;
   }
 
-  const ctx = imagePreviewCanvas.getContext("2d");
-  imagePreviewCanvas.width = loadedImage.width;
-  imagePreviewCanvas.height = loadedImage.height;
-  ctx.drawImage(loadedImage, 0, 0);
+  const inputType = inputTypeSelect.value === "auto"
+    ? detectInputType(currentInputFile) || "unknown"
+    : inputTypeSelect.value;
 
-  const mimeType = imageFormatSelect.value;
-  const ext = mimeType === "image/png" ? "png" : "jpg";
+  const outputType = outputTypeSelect.value;
 
-  const baseName = imageFilenameInput.value.trim() || "converted_image";
+  if (inputType === "unknown" || !["pdf", "jpeg", "png", "word"].includes(inputType)) {
+    alert("入力形式を判定できません。手動で入力形式を選択してください。");
+    return;
+  }
+
+  const baseName = (outputFilenameInput.value || "output_file").trim();
+  const ext = getExtByFormat(outputType);
   const fileName = `${baseName}.${ext}`;
 
-  imagePreviewCanvas.toBlob(
-    (blob) => {
+  convertStatus.textContent = `変換中... （入力: ${inputType.toUpperCase()} → 出力: ${outputType.toUpperCase()}）`;
+  convertDownloadArea.innerHTML = "";
+  hidePreview();
+
+  // ここで「入力形式 × 出力形式」に応じて処理を分岐
+  handleConversion(inputType, outputType, currentInputFile, fileName)
+    .then(() => {
+      convertStatus.textContent = `変換が完了しました。（${fileName}）`;
+    })
+    .catch((err) => {
+      console.error(err);
+      convertStatus.textContent = "変換中にエラーが発生しました。詳しくはコンソールを確認してください。";
+      alert(err.message || "変換に失敗しました。");
+    });
+});
+
+// 出力拡張子決定
+function getExtByFormat(format) {
+  switch (format) {
+    case "pdf":
+      return "pdf";
+    case "jpeg":
+      return "jpg";
+    case "png":
+      return "png";
+    case "word":
+      return "docx";
+    default:
+      return "bin";
+  }
+}
+
+// 実際の変換処理
+async function handleConversion(inputType, outputType, file, fileName) {
+  // 1) 同じ形式への変換（基本はそのままコピーとみなす）
+  if (inputType === outputType) {
+    const blob = file.slice(0, file.size, file.type || "application/octet-stream");
+    createDownloadLink(convertDownloadArea, blob, fileName);
+    // PDFや画像ならプレビュー
+    await previewFile(outputType, blob);
+    return;
+  }
+
+  // 2) 画像(JPEG/PNG) → 画像(JPEG/PNG)
+  const isImageIn = inputType === "jpeg" || inputType === "png";
+  const isImageOut = outputType === "jpeg" || outputType === "png";
+
+  if (isImageIn && isImageOut) {
+    const img = await loadImageFromFile(file);
+    const canvas = convertPreviewCanvas;
+    const ctx = canvas.getContext("2d");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    canvas.style.display = "block";
+
+    const mimeType = outputType === "jpeg" ? "image/jpeg" : "image/png";
+    const blob = await canvasToBlob(canvas, mimeType, 0.92);
+    createDownloadLink(convertDownloadArea, blob, fileName);
+    return;
+  }
+
+  // 3) 画像(JPEG/PNG) → PDF
+  if (isImageIn && outputType === "pdf") {
+    const pdfBlob = await imageToPdfBlob(file);
+    createDownloadLink(convertDownloadArea, pdfBlob, fileName);
+    await previewFile("pdf", pdfBlob);
+    return;
+  }
+
+  // 4) それ以外は今は未実装（ブラウザだけでは重い/複雑）
+  throw new Error(
+    `この組み合わせ（入力: ${inputType.toUpperCase()} → 出力: ${outputType.toUpperCase()}）は、現在のブラウザ版では未対応です。\n` +
+    "ローカルサーバや外部ツール(ffmpeg, libreoffice など)と連携して実装してください。"
+  );
+}
+
+// 画像ファイルを Image オブジェクトとして読み込む
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(err);
+      img.src = e.target.result;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
+// canvas → Blob
+function canvasToBlob(canvas, mimeType, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
       if (!blob) {
-        alert("変換に失敗しました。");
+        reject(new Error("Blobの生成に失敗しました。"));
         return;
       }
-      createDownloadLink(imageDownloadArea, blob, fileName);
-    },
-    mimeType,
-    0.92
-  );
-});
+      resolve(blob);
+    }, mimeType, quality);
+  });
+}
+
+// 画像(1枚) → PDF Blob（簡易版）
+async function imageToPdfBlob(file) {
+  // jsPDF を使う方法もあるが、CDN追加が必要になるので
+  // ここでは簡易的に「画像を埋め込んだPDF」を生成する最小構成は省略し、
+  // 実装しやすいようにコメントでガイドだけ残す形もあり。
+  //
+  // ここでは、実装例として jsPDF を後から組み込める前提で「未実装」とせず、
+  // シンプルなPDFっぽいバイナリを作るのは現実的ではないので、
+  // 実際には jsPDF などを読み込んで実装してください。
+  //
+  // ひとまずダミー実装：画像をそのまま返す（プレビュー用にのみ利用）
+  const img = await loadImageFromFile(file);
+  const canvas = convertPreviewCanvas;
+  const ctx = canvas.getContext("2d");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  ctx.drawImage(img, 0, 0);
+  canvas.style.display = "block";
+
+  // 本当のPDFではないが、ここでは一時的にPNGとして返すダミー実装
+  // 実運用では jsPDF を利用して PDF を生成するコードに差し替えてください。
+  const blob = await canvasToBlob(canvas, "image/png", 0.92);
+  alert("現状のサンプルでは画像→PDF はダミー実装です。\n本格的なPDF生成には jsPDF などのライブラリを組み込んでください。");
+  return blob;
+}
+
+// 形式に応じて簡易プレビュー
+async function previewFile(format, blob) {
+  if (format === "jpeg" || format === "png") {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = convertPreviewCanvas;
+      const ctx = canvas.getContext("2d");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      canvas.style.display = "block";
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  } else if (format === "pdf") {
+    const url = URL.createObjectURL(blob);
+    convertPreviewFrame.src = url;
+    convertPreviewFrame.style.display = "block";
+  } else {
+    // Wordなどはブラウザ内でのプレビューが難しいので省略
+    convertPreviewCanvas.style.display = "none";
+    convertPreviewFrame.style.display = "none";
+  }
+}
+
+// ダウンロードリンク生成
+function createDownloadLink(container, blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.textContent = `「${fileName}」としてダウンロード`;
+  link.className = "download-link";
+
+  container.innerHTML = "";
+  container.appendChild(link);
+}
 
 // ========== QRコード作成 ==========
 
@@ -96,7 +286,6 @@ generateQrBtn.addEventListener("click", () => {
   const baseName = qrFilenameInput.value.trim() || "qrcode";
   const fileName = `${baseName}.png`;
 
-  // QRCode.toCanvas( canvas, text, options, callback )
   QRCode.toCanvas(
     qrCanvas,
     text,
@@ -157,7 +346,6 @@ generateBarcodeBtn.addEventListener("click", () => {
 
   const format = barcodeFormatSelect.value;
 
-  // JsBarcode(target, text, options)
   try {
     JsBarcode(barcodeSvg, text, {
       format: format,
@@ -167,18 +355,19 @@ generateBarcodeBtn.addEventListener("click", () => {
       displayValue: true,
     });
 
-    // SVG を PNG に変換してダウンロード可能にする
     const baseName = barcodeFilenameInput.value.trim() || "barcode";
     const fileName = `${baseName}.png`;
 
-    svgToPngBlob(barcodeSvg).then((blob) => {
-      barcodeDownloadArea.innerHTML = "";
-      createDownloadLink(barcodeDownloadArea, blob, fileName);
-      copyBarcodeBtn.disabled = false;
-    }).catch((err) => {
-      console.error(err);
-      alert("バーコード画像の生成に失敗しました。");
-    });
+    svgToPngBlob(barcodeSvg)
+      .then((blob) => {
+        barcodeDownloadArea.innerHTML = "";
+        createDownloadLink(barcodeDownloadArea, blob, fileName);
+        copyBarcodeBtn.disabled = false;
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("バーコード画像の生成に失敗しました。");
+      });
   } catch (e) {
     console.error(e);
     alert("バーコードの生成に失敗しました。入力値や形式を確認してください。");
@@ -191,35 +380,24 @@ copyBarcodeBtn.addEventListener("click", () => {
     return;
   }
 
-  svgToPngBlob(barcodeSvg).then(async (blob) => {
-    try {
-      const item = new ClipboardItem({ [blob.type]: blob });
-      await navigator.clipboard.write([item]);
-      alert("バーコード画像をクリップボードにコピーしました。");
-    } catch (e) {
-      console.error(e);
-      alert("クリップボードへのコピーに失敗しました。");
-    }
-  });
+  svgToPngBlob(barcodeSvg)
+    .then(async (blob) => {
+      try {
+        const item = new ClipboardItem({ [blob.type]: blob });
+        await navigator.clipboard.write([item]);
+        alert("バーコード画像をクリップボードにコピーしました。");
+      } catch (e) {
+        console.error(e);
+        alert("クリップボードへのコピーに失敗しました。");
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("バーコード画像の生成に失敗しました。");
+    });
 });
 
-// ========== 共通: ダウンロードリンク生成関数 ==========
-
-function createDownloadLink(container, blob, fileName) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.textContent = `「${fileName}」としてダウンロード`;
-  link.className = "download-link";
-
-  // 前のURLを解放してから差し替える場合は、ここで管理してもよい
-  container.innerHTML = "";
-  container.appendChild(link);
-}
-
-// ========== SVG → PNG Blob 変換関数 ==========
-
+// SVG → PNG Blob
 function svgToPngBlob(svgElement) {
   return new Promise((resolve, reject) => {
     const xml = new XMLSerializer().serializeToString(svgElement);
