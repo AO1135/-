@@ -24,19 +24,24 @@
     <button class="tab-button" data-tab="barcode-tab">バーコード作成</button>
   </nav>
 
-  <!-- タブ内容：ファイル変換 -->
+  <!-- タブ内容：ファイル変換（複数画像対応） -->
   <section id="convert-tab" class="tab-content active">
     <h2>ファイル変換</h2>
     <p class="note">
       ※ 現時点ではブラウザだけで実現しやすい変換のみ実装済みです。<br>
-      画像(JPEG/PNG) ↔ 画像、画像 → PDF に対応。PDF/Wordの高度な変換は後から追加できます。
+      画像(JPEG/PNG) 複数枚 → JPEG/PNG/PDF に対応（PDF/Wordの高度な変換は後から追加できます）。
     </p>
 
     <div class="panel">
       <div class="form-row">
         <label class="file-label">
-          入力ファイル（PDF / JPEG / PNG / DOCX）：
-          <input type="file" id="convert-input-file" accept=".pdf,.png,.jpg,.jpeg,.docx,application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          入力ファイル（PDF / JPEG / PNG / DOCX）※画像は複数選択可：
+          <input
+            type="file"
+            id="convert-input-file"
+            accept=".pdf,.png,.jpg,.jpeg,.docx,application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            multiple
+          >
         </label>
       </div>
 
@@ -62,7 +67,10 @@
       </div>
 
       <div class="form-row">
-        <label for="output-filename">出力ファイル名（拡張子なし）：</label>
+        <label for="output-filename">
+          出力ファイル名のベース（拡張子なし）：<br>
+          ※複数ファイルの場合は「base_1, base_2 ...」のように連番を付けます
+        </label>
         <input type="text" id="output-filename" placeholder="output_file">
       </div>
 
@@ -71,7 +79,7 @@
     </div>
 
     <div class="result-area">
-      <h3>結果プレビュー</h3>
+      <h3>結果プレビュー（最初のファイルのみ）</h3>
       <canvas id="convert-preview-canvas" class="preview-canvas"></canvas>
       <iframe id="convert-preview-frame" class="preview-frame"></iframe>
       <div class="download-area" id="convert-download-area"></div>
