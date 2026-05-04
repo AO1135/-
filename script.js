@@ -28,6 +28,7 @@ const convertDownloadArea = document.getElementById("convert-download-area");
 
 let currentInputFiles = [];
 
+// 入力ファイル選択
 convertInputFile.addEventListener("change", () => {
   const files = Array.from(convertInputFile.files || []);
   currentInputFiles = files;
@@ -152,7 +153,7 @@ function getExtByFormat(format) {
  * A4縦（mm単位）、画像はページ内に収まるようリサイズ
  */
 async function imagesToSinglePdfBlob(files, doPreview) {
-  const { jsPDF } = window.jspdf;
+  const { jsPDF } = window.jspdf || {};
   if (!jsPDF) {
     throw new Error("jsPDFが読み込まれていません。ネットワーク環境を確認してください。");
   }
@@ -167,13 +168,16 @@ async function imagesToSinglePdfBlob(files, doPreview) {
   for (const file of files) {
     const img = await loadImageFromFile(file);
 
-    // px → mm 変換をおおよそで行う（dpiを仮に 96 として計算）
+    // 画像を JPEG/PNG DataURL に変換
+    const isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
+    const imgDataUrl = await imageToDataUrl(img, isPng ? "image/png" : "image/jpeg");
+
+    // px → mm（dpi=96 と仮定）
     const dpi = 96;
     const mmPerInch = 25.4;
     const imgWidthMm = (img.width / dpi) * mmPerInch;
     const imgHeightMm = (img.height / dpi) * mmPerInch;
 
-    // ページ内に収まるようにスケーリング
     const margin = 10; // 上下左右10mmマージン
     const maxWidth = pageWidth - margin * 2;
     const maxHeight = pageHeight - margin * 2;
@@ -188,16 +192,17 @@ async function imagesToSinglePdfBlob(files, doPreview) {
     const x = (pageWidth - displayWidth) / 2;
     const y = (pageHeight - displayHeight) / 2;
 
-    // 画像をDataURLとして一時的に取得
-    const imgDataUrl = await imageToDataUrl(img);
-
     if (pageIndex > 0) {
       pdf.addPage();
     }
-    pdf.addImage(imgDataUrl, "JPEG", x, y, displayWidth, displayHeight);
+
+    // 画像フォーマット指定（"PNG" or "JPEG"）
+    const imgFormat = isPng ? "PNG" : "JPEG";
+    pdf.addImage(imgDataUrl, imgFormat, x, y, displayWidth, displayHeight);
+
     pageIndex++;
 
-    // プレビュー用（最初の画像をキャンバスに描画）
+    // プレビュー：最初の画像だけキャンバスに描画
     if (doPreview && pageIndex === 1) {
       const canvas = convertPreviewCanvas;
       const ctx = canvas.getContext("2d");
@@ -208,26 +213,27 @@ async function imagesToSinglePdfBlob(files, doPreview) {
     }
   }
 
+  // 有効なPDFバイナリのBlobを生成
   const blob = pdf.output("blob");
   return blob;
 }
 
 // Imageオブジェクト → DataURL
-function imageToDataUrl(img) {
+function imageToDataUrl(img, mimeType = "image/jpeg") {
   return new Promise((resolve) => {
     const canvas = document.createElement("canvas");
     canvas.width = img.width;
     canvas.height = img.height;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    const dataUrl = canvas.toDataURL(mimeType, 0.9);
     resolve(dataUrl);
   });
 }
 
 /**
  * 単一ファイル用の変換処理
- * 画像→PDF以外の組み合わせを処理（PDFまとめは別関数）
+ * 画像→PDF以外の組み合わせを処理（PDFまとめは imagesToSinglePdfBlob が担当）
  */
 async function handleConversionMulti(inputType, outputType, file, fileName, doPreview) {
   // 1) 同じ形式 → そのままコピー
